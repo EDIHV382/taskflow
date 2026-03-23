@@ -1,16 +1,12 @@
-import { NextResponse } from 'next/server'
+import { Request, Response } from '@vercel/node'
 
-export async function POST() {
-  const response = NextResponse.json({ message: 'Logged out successfully' })
+export default async function handler(request: Request, response: Response) {
+  if (request.method !== 'POST') {
+    return response.status(405).json({ error: 'Method not allowed' })
+  }
   
   // Clear refresh token cookie
-  response.cookies.set('refreshToken', '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 0,
-    path: '/',
-  })
+  response.setHeader('Set-Cookie', 'refreshToken=; HttpOnly; Secure; SameSite=Lax; Max-Age=0; Path=/')
   
-  return response
+  return response.status(200).json({ message: 'Logged out successfully' })
 }

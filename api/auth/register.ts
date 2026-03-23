@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { NextRequest, NextResponse } from 'next/server'
+import { Request, Response } from '@vercel/node'
 import { z } from 'zod'
 
 const prisma = new PrismaClient()
@@ -12,12 +12,13 @@ const registerSchema = z.object({
   password: z.string().min(6),
 })
 
-export async function POST(request: NextRequest) {
+export default async function handler(request: Request, response: Response) {
+  if (request.method !== 'POST') {
+    return response.status(405).json({ error: 'Method not allowed' })
+  }
+  
   try {
-    const body = await request.json()
-    
-    // Validate input
-    const validatedData = registerSchema.parse(body)
+    const validatedData = registerSchema.parse(request.body)
     
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -25,10 +26,7 @@ export async function POST(request: NextRequest) {
     })
     
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'Email already registered' },
-        { status: 400 }
-      )
+      return response.status(400).json({ error: 'Email already registered' })
     }
     
     // Hash password
@@ -65,7 +63,7 @@ export async function POST(request: NextRequest) {
       },
     })
     
-    return NextResponse.json({
+    return response.status(201).json({
       user: {
         id: user.id,
         name: user.name,
@@ -75,16 +73,10 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
-        { status: 400 }
-      )
+      return response.status(400).json({ error: 'Validation error', details: error.errors })
     }
     
     console.error('Register error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return response.status(500).json({ error: 'Internal server error' })
   }
 }

@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { NextRequest, NextResponse } from 'next/server'
+import { Request, Response } from '@vercel/node'
 import { z } from 'zod'
 
 const prisma = new PrismaClient()
@@ -11,12 +11,13 @@ const loginSchema = z.object({
   password: z.string().min(1),
 })
 
-export async function POST(request: NextRequest) {
+export default async function handler(request: Request, response: Response) {
+  if (request.method !== 'POST') {
+    return response.status(405).json({ error: 'Method not allowed' })
+  }
+  
   try {
-    const body = await request.json()
-    
-    // Validate input
-    const validatedData = loginSchema.parse(body)
+    const validatedData = loginSchema.parse(request.body)
     
     // Find user
     const user = await prisma.user.findUnique({
@@ -24,20 +25,14 @@ export async function POST(request: NextRequest) {
     })
     
     if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
+      return response.status(401).json({ error: 'Invalid credentials' })
     }
     
     // Verify password
     const isPasswordValid = await bcrypt.compare(validatedData.password, user.password)
     
     if (!isPasswordValid) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
+      return response.status(401).json({ error: 'Invalid credentials' })
     }
     
     // Generate tokens
@@ -62,8 +57,10 @@ export async function POST(request: NextRequest) {
       },
     })
     
-    // Return response
-    const response = NextResponse.json({
+    // Set refresh token in httpOnly cookie
+    response.setHeader('Set-Cookie', `refreshToken=${refreshToken}; HttpOnly; Secure; SameSite=Lax; Max-Age=604800; Path=/`)
+    
+    return response.status(200).json({
       user: {
         id: user.id,
         name: user.name,
@@ -71,29 +68,12 @@ export async function POST(request: NextRequest) {
       },
       accessToken,
     })
-    
-    // Set refresh token in httpOnly cookie
-    response.cookies.set('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/',
-    })
-    
-    return response
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
-        { status: 400 }
-      )
+      return response.status(400).json({ error: 'Validation error', details: error.errors })
     }
     
     console.error('Login error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return response.status(500).json({ error: 'Internal server error' })
   }
 }

@@ -1,28 +1,26 @@
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
-import { NextRequest, NextResponse } from 'next/server'
+import { Request, Response } from '@vercel/node'
 
 const prisma = new PrismaClient()
 
-export async function GET(request: NextRequest) {
+export default async function handler(request: Request, response: Response) {
+  if (request.method !== 'GET') {
+    return response.status(405).json({ error: 'Method not allowed' })
+  }
+  
   try {
     // Get token from Authorization header
-    const authHeader = request.headers.get('authorization')
+    const authHeader = request.headers.authorization
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Access token missing' },
-        { status: 401 }
-      )
+      return response.status(401).json({ error: 'Access token missing' })
     }
     
     const token = authHeader.split(' ')[1]
     
     // Verify token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_ACCESS_SECRET!
-    ) as { userId: string }
+    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as { userId: string }
     
     // Get user
     const user = await prisma.user.findUnique({
@@ -35,18 +33,12 @@ export async function GET(request: NextRequest) {
     })
     
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+      return response.status(404).json({ error: 'User not found' })
     }
     
-    return NextResponse.json(user)
+    return response.status(200).json(user)
   } catch (error) {
     console.error('Me error:', error)
-    return NextResponse.json(
-      { error: 'Invalid token' },
-      { status: 401 }
-    )
+    return response.status(401).json({ error: 'Invalid token' })
   }
 }

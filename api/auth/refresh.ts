@@ -1,30 +1,23 @@
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
-import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
+import { Request, Response } from '@vercel/node'
 
 const prisma = new PrismaClient()
 
-const refreshTokenSchema = z.object({
-  refreshToken: z.string().min(1),
-})
-
-export async function POST(request: NextRequest) {
+export default async function handler(request: Request, response: Response) {
+  if (request.method !== 'POST') {
+    return response.status(405).json({ error: 'Method not allowed' })
+  }
+  
   try {
-    const refreshToken = request.cookies.get('refreshToken')?.value
+    const refreshToken = request.cookies?.refreshToken
     
     if (!refreshToken) {
-      return NextResponse.json(
-        { error: 'Refresh token missing' },
-        { status: 401 }
-      )
+      return response.status(401).json({ error: 'Refresh token missing' })
     }
     
     // Verify refresh token
-    const decoded = jwt.verify(
-      refreshToken,
-      process.env.JWT_REFRESH_SECRET!
-    ) as { userId: string }
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET!) as { userId: string }
     
     // Check if refresh token exists in DB
     const tokenRecord = await prisma.refreshToken.findUnique({
@@ -33,10 +26,7 @@ export async function POST(request: NextRequest) {
     })
     
     if (!tokenRecord) {
-      return NextResponse.json(
-        { error: 'Invalid refresh token' },
-        { status: 401 }
-      )
+      return response.status(401).json({ error: 'Invalid refresh token' })
     }
     
     // Check if expired
@@ -44,10 +34,7 @@ export async function POST(request: NextRequest) {
       await prisma.refreshToken.delete({
         where: { token: refreshToken },
       })
-      return NextResponse.json(
-        { error: 'Refresh token expired' },
-        { status: 401 }
-      )
+      return response.status(401).json({ error: 'Refresh token expired' })
     }
     
     // Generate new tokens
@@ -76,25 +63,14 @@ export async function POST(request: NextRequest) {
       },
     })
     
-    const response = NextResponse.json({
+    // Set new refresh token in cookie
+    response.setHeader('Set-Cookie', `refreshToken=${newRefreshToken}; HttpOnly; Secure; SameSite=Lax; Max-Age=604800; Path=/`)
+    
+    return response.status(200).json({
       accessToken: newAccessToken,
     })
-    
-    // Set new refresh token in cookie
-    response.cookies.set('refreshToken', newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/',
-    })
-    
-    return response
   } catch (error) {
     console.error('Refresh error:', error)
-    return NextResponse.json(
-      { error: 'Invalid refresh token' },
-      { status: 401 }
-    )
+    return response.status(401).json({ error: 'Invalid refresh token' })
   }
 }
