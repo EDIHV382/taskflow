@@ -25,8 +25,9 @@ export const Login = () => {
 
   const autoFillDemo = () => {
     console.log('🔵 Autocompletar clicked')
-    setValue('email', 'example@gmail.com', { shouldValidate: true, shouldDirty: true })
-    setValue('password', '123456', { shouldValidate: true, shouldDirty: true })
+    // Usar setValue con shouldValidate y shouldDirty para que se dispare la validación
+    setValue('email', 'example@gmail.com', { shouldValidate: true, shouldDirty: true, force: true })
+    setValue('password', '123456', { shouldValidate: true, shouldDirty: true, force: true })
     console.log('🟢 Values set:', { email: 'example@gmail.com', password: '***' })
   }
 

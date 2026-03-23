@@ -1,6 +1,11 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 
-const API_URL = (import.meta as unknown as { env: { VITE_API_URL: string } }).env.VITE_API_URL || 'http://localhost:5000'
+// Detectar si estamos en production (Vercel) o development
+// En production, usar la misma URL del frontend (las API routes están en el mismo dominio)
+// En development, usar localhost:5000
+const API_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : window.location.origin
 
 const api = axios.create({
   baseURL: API_URL,
