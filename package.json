@@ -1,22 +1,29 @@
 {
   "name": "taskflow",
   "version": "1.0.0",
-  "description": "Task management application with JWT authentication",
+  "description": "TaskFlow - Full-Stack Task Manager on Vercel",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "cd server && npm run dev",
-    "dev:client": "cd client && npm run dev",
-    "build": "npm run build:server && npm run build:client",
-    "build:server": "cd server && npm run build",
+    "dev": "vercel dev",
+    "build": "npm run build:client",
     "build:client": "cd client && npm run build",
-    "start:server": "cd server && npm run start",
-    "install:all": "npm install && cd server && npm install && cd ../client && npm install"
+    "deploy": "vercel --prod",
+    "install:client": "cd client && npm install"
   },
-  "keywords": ["task-manager", "react", "express", "prisma", "jwt"],
+  "keywords": ["task-manager", "react", "typescript", "vercel", "serverless", "prisma", "jwt"],
   "author": "",
   "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^5.7.1",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.22.4"
+  },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.10.6",
+    "prisma": "^5.7.1",
+    "vercel": "^32.4.1"
   }
 }
