@@ -1,10 +1,9 @@
-import { PrismaClient } from '@prisma/client'
-import jwt from 'jsonwebtoken'
-import { Request, Response } from '@vercel/node'
+const { PrismaClient } = require('@prisma/client')
+const jwt = require('jsonwebtoken')
 
 const prisma = new PrismaClient()
 
-export default async function handler(request: Request, response: Response) {
+module.exports = async function handler(request, response) {
   if (request.method !== 'GET') {
     return response.status(405).json({ error: 'Method not allowed' })
   }
@@ -20,7 +19,7 @@ export default async function handler(request: Request, response: Response) {
     const token = authHeader.split(' ')[1]
     
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as { userId: string }
+    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET)
     
     // Get user
     const user = await prisma.user.findUnique({

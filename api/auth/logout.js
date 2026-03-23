@@ -1,6 +1,4 @@
-import { Request, Response } from '@vercel/node'
-
-export default async function handler(request: Request, response: Response) {
+module.exports = async function handler(request, response) {
   if (request.method !== 'POST') {
     return response.status(405).json({ error: 'Method not allowed' })
   }

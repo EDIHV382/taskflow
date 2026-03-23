@@ -1,28 +1,25 @@
-import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
-import { Request, Response } from '@vercel/node'
-import { z } from 'zod'
+const { PrismaClient } = require('@prisma/client')
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 
 const prisma = new PrismaClient()
 
-const registerSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
-})
-
-export default async function handler(request: Request, response: Response) {
+module.exports = async function handler(request, response) {
   if (request.method !== 'POST') {
     return response.status(405).json({ error: 'Method not allowed' })
   }
   
   try {
-    const validatedData = registerSchema.parse(request.body)
+    const { name, email, password } = request.body
+    
+    // Validate input
+    if (!name || !email || !password) {
+      return response.status(400).json({ error: 'All fields required' })
+    }
     
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
-      where: { email: validatedData.email },
+      where: { email },
     })
     
     if (existingUser) {
@@ -30,13 +27,13 @@ export default async function handler(request: Request, response: Response) {
     }
     
     // Hash password
-    const hashedPassword = await bcrypt.hash(validatedData.password, 10)
+    const hashedPassword = await bcrypt.hash(password, 10)
     
     // Create user
     const user = await prisma.user.create({
       data: {
-        name: validatedData.name,
-        email: validatedData.email,
+        name,
+        email,
         password: hashedPassword,
       },
     })
@@ -44,13 +41,13 @@ export default async function handler(request: Request, response: Response) {
     // Generate tokens
     const accessToken = jwt.sign(
       { userId: user.id },
-      process.env.JWT_ACCESS_SECRET!,
+      process.env.JWT_ACCESS_SECRET,
       { expiresIn: '15m' }
     )
     
     const refreshToken = jwt.sign(
       { userId: user.id },
-      process.env.JWT_REFRESH_SECRET!,
+      process.env.JWT_REFRESH_SECRET,
       { expiresIn: '7d' }
     )
     
@@ -72,10 +69,6 @@ export default async function handler(request: Request, response: Response) {
       accessToken,
     })
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return response.status(400).json({ error: 'Validation error', details: error.errors })
-    }
-    
     console.error('Register error:', error)
     return response.status(500).json({ error: 'Internal server error' })
   }

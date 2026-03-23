@@ -1,10 +1,9 @@
-import { PrismaClient } from '@prisma/client'
-import jwt from 'jsonwebtoken'
-import { Request, Response } from '@vercel/node'
+const { PrismaClient } = require('@prisma/client')
+const jwt = require('jsonwebtoken')
 
 const prisma = new PrismaClient()
 
-export default async function handler(request: Request, response: Response) {
+module.exports = async function handler(request, response) {
   if (request.method !== 'POST') {
     return response.status(405).json({ error: 'Method not allowed' })
   }
@@ -17,7 +16,7 @@ export default async function handler(request: Request, response: Response) {
     }
     
     // Verify refresh token
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET!) as { userId: string }
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET)
     
     // Check if refresh token exists in DB
     const tokenRecord = await prisma.refreshToken.findUnique({
@@ -40,13 +39,13 @@ export default async function handler(request: Request, response: Response) {
     // Generate new tokens
     const newAccessToken = jwt.sign(
       { userId: decoded.userId },
-      process.env.JWT_ACCESS_SECRET!,
+      process.env.JWT_ACCESS_SECRET,
       { expiresIn: '15m' }
     )
     
     const newRefreshToken = jwt.sign(
       { userId: decoded.userId },
-      process.env.JWT_REFRESH_SECRET!,
+      process.env.JWT_REFRESH_SECRET,
       { expiresIn: '7d' }
     )
     
