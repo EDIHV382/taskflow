@@ -37,10 +37,19 @@ export interface UpdateTaskDto {
 export interface TaskFilters {
   status?: Status
   priority?: Priority
+  search?: string
 }
 
 export type SortBy = 'dueDate' | 'priority' | 'createdAt'
 export type SortOrder = 'asc' | 'desc'
+
+export interface Pagination {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+  hasMore: boolean
+}
 
 interface TaskState {
   tasks: Task[]
@@ -48,24 +57,27 @@ interface TaskState {
   filters: TaskFilters
   sortBy: SortBy
   order: SortOrder
+  pagination: Pagination
   isDemoMode: boolean
-  fetchTasks: () => Promise<void>
+  searchQuery: string
+  fetchTasks: (page?: number) => Promise<void>
   createTask: (data: CreateTaskDto) => Promise<void>
   updateTask: (id: string, data: UpdateTaskDto) => Promise<void>
   deleteTask: (id: string) => Promise<void>
   updateStatus: (id: string, status: Status) => Promise<void>
   setFilters: (filters: TaskFilters) => void
   setSorting: (sortBy: SortBy, order: SortOrder) => void
+  setSearchQuery: (query: string) => void
   getFilteredTasks: () => Task[]
   resetToDemo: () => void
 }
 
-// Tareas demo iniciales (se muestran al recargar)
+// Tareas demo iniciales
 const demoTasks: Task[] = [
   {
     id: 'demo-1',
     title: '👋 Bienvenido a TaskFlow',
-    description: 'Esta es tu primera tarea de ejemplo. ¡Prueba el drag & drop en el tablero Kanban arrastrando esta tarea entre columnas!',
+    description: 'Esta es tu primera tarea de ejemplo. ¡Prueba el drag & drop en el tablero Kanban!',
     priority: 'HIGH',
     status: 'PENDING',
     dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
@@ -76,7 +88,7 @@ const demoTasks: Task[] = [
   {
     id: 'demo-2',
     title: '🎨 Explora el Dashboard',
-    description: 'Cambia entre vista grid y lista, prueba los filtros por estado y prioridad, y ordena las tareas por fecha o prioridad.',
+    description: 'Usa la búsqueda, filtros y paginación para organizar tus tareas.',
     priority: 'MEDIUM',
     status: 'IN_PROGRESS',
     dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
@@ -87,7 +99,7 @@ const demoTasks: Task[] = [
   {
     id: 'demo-3',
     title: '🌙 Prueba el Dark Mode',
-    description: 'Haz clic en el ícono de luna/sol en el header para alternar entre modo claro y oscuro. ¡La preferencia se guarda automáticamente!',
+    description: 'Alterna entre modo claro y oscuro con el botón en el header.',
     priority: 'LOW',
     status: 'COMPLETED',
     dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -97,8 +109,8 @@ const demoTasks: Task[] = [
   },
   {
     id: 'demo-4',
-    title: '📱 Verifica el Diseño Responsivo',
-    description: 'Ajusta el tamaño del navegador para ver cómo la interfaz se adapta a móviles, tablets y escritorio.',
+    title: '📱 Diseño Responsivo',
+    description: 'TaskFlow se adapta perfectamente a móviles, tablets y escritorio.',
     priority: 'MEDIUM',
     status: 'PENDING',
     dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -108,8 +120,8 @@ const demoTasks: Task[] = [
   },
   {
     id: 'demo-5',
-    title: '🚀 Comparte este Portfolio',
-    description: 'Este proyecto demuestra: React 18, TypeScript, Node.js, Express, Prisma, PostgreSQL, JWT Auth, Drag & Drop, y más.',
+    title: '🚀 Seguridad JWT + Rate Limiting',
+    description: 'Autenticación con tokens seguros, cookies HttpOnly y protección contra fuerza bruta.',
     priority: 'HIGH',
     status: 'PENDING',
     dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
@@ -117,7 +129,26 @@ const demoTasks: Task[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: 'demo-6',
+    title: '✨ TypeScript + Zod v4',
+    description: 'Código tipado de extremo a extremo con validaciones robustas.',
+    priority: 'HIGH',
+    status: 'COMPLETED',
+    dueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
+    userId: 'demo-user',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ]
+
+const defaultPagination: Pagination = {
+  page: 1,
+  limit: 20,
+  total: 0,
+  totalPages: 1,
+  hasMore: false,
+}
 
 export const useTaskStore = create<TaskState>()(
   persist(
@@ -127,75 +158,105 @@ export const useTaskStore = create<TaskState>()(
       filters: {},
       sortBy: 'createdAt',
       order: 'desc',
-      isDemoMode: true, // Por defecto, modo demo activado
+      pagination: defaultPagination,
+      isDemoMode: true,
+      searchQuery: '',
 
-      // Inicializar con tareas demo
-      fetchTasks: async () => {
+      fetchTasks: async (page = 1) => {
         set({ isLoading: true })
-        
-        const { filters, sortBy, order } = get()
-        
-        // Si estamos en modo demo, cargar tareas demo en memoria con filtros aplicados (NO de la API)
-        if (get().isDemoMode) {
-          // Simular loading
+
+        const { filters, sortBy, order, searchQuery, isDemoMode, pagination } = get()
+
+        if (isDemoMode) {
+          // Simular delay
           await new Promise(resolve => setTimeout(resolve, 300))
-          
-          // Aplicar filtros a las tareas demo
+
+          // Filtrar tareas demo
           let filtered = [...demoTasks]
-          
+
           if (filters.status) {
             filtered = filtered.filter((t) => t.status === filters.status)
           }
-          
+
           if (filters.priority) {
             filtered = filtered.filter((t) => t.priority === filters.priority)
           }
-          
-          // Aplicar ordenamiento
-          if (sortBy === 'priority') {
-            const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 }
-            filtered.sort((a, b) => {
-              const diff = priorityOrder[a.priority] - priorityOrder[b.priority]
-              return order === 'asc' ? diff : -diff
-            })
-          } else if (sortBy === 'dueDate') {
-            filtered.sort((a, b) => {
+
+          if (searchQuery) {
+            const query = searchQuery.toLowerCase()
+            filtered = filtered.filter(
+              (t) =>
+                t.title.toLowerCase().includes(query) ||
+                (t.description?.toLowerCase().includes(query) ?? false)
+            )
+          }
+
+          // Ordenar
+          filtered.sort((a, b) => {
+            if (sortBy === 'priority') {
+              const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 }
+              const aValue = priorityOrder[a.priority]
+              const bValue = priorityOrder[b.priority]
+              return order === 'asc' ? aValue - bValue : bValue - aValue
+            } else if (sortBy === 'dueDate') {
               const aDate = a.dueDate ? new Date(a.dueDate).getTime() : 0
               const bDate = b.dueDate ? new Date(b.dueDate).getTime() : 0
               return order === 'asc' ? aDate - bDate : bDate - aDate
-            })
-          } else if (sortBy === 'createdAt') {
-            filtered.sort((a, b) => {
-              const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-              return order === 'asc' ? diff : -diff
-            })
-          }
-          
-          set({ tasks: filtered, isLoading: false })
+            } else {
+              const aDate = new Date(a.createdAt).getTime()
+              const bDate = new Date(b.createdAt).getTime()
+              return order === 'asc' ? aDate - bDate : bDate - aDate
+            }
+          })
+
+          // Paginar
+          const limit = pagination.limit
+          const start = (page - 1) * limit
+          const end = start + limit
+          const paginated = filtered.slice(start, end)
+
+          set({
+            tasks: paginated,
+            pagination: {
+              page,
+              limit,
+              total: filtered.length,
+              totalPages: Math.ceil(filtered.length / limit),
+              hasMore: end < filtered.length,
+            },
+            isLoading: false,
+          })
           return
         }
-        
-        // Modo normal: cargar de la API
+
+        // Modo API
         try {
           const params = new URLSearchParams()
-          
+          params.append('page', page.toString())
+          params.append('limit', pagination.limit.toString())
+
           if (filters.status) params.append('status', filters.status)
           if (filters.priority) params.append('priority', filters.priority)
+          if (searchQuery) params.append('search', searchQuery)
           if (sortBy) params.append('sortBy', sortBy)
           if (order) params.append('order', order)
-          
+
           const response = await api.get(`/api/tasks?${params.toString()}`)
-          set({ tasks: response.data, isLoading: false })
+          const { tasks, pagination: apiPagination } = response.data
+
+          set({
+            tasks,
+            pagination: apiPagination,
+            isLoading: false,
+          })
         } catch {
           set({ isLoading: false })
           toast.error('Failed to fetch tasks')
         }
       },
 
-      // Crear tarea SOLO en memoria (no llama a la API en modo demo)
       createTask: async (data) => {
         if (get().isDemoMode) {
-          // Crear tarea temporal con ID único
           const newTask: Task = {
             ...data,
             id: `temp-${Date.now()}`,
@@ -206,11 +267,10 @@ export const useTaskStore = create<TaskState>()(
             updatedAt: new Date().toISOString(),
           }
           set((state) => ({ tasks: [...state.tasks, newTask] }))
-          toast.success('✅ Tarea creada (temporal - se perderá al recargar)')
+          toast.success('✅ Tarea creada (modo demo)')
           return
         }
-        
-        // Modo normal: crear en API
+
         try {
           const response = await api.post('/api/tasks', data)
           set((state) => ({ tasks: [...state.tasks, response.data] }))
@@ -220,7 +280,6 @@ export const useTaskStore = create<TaskState>()(
         }
       },
 
-      // Editar tarea SOLO en memoria (no llama a la API en modo demo)
       updateTask: async (id, data) => {
         if (get().isDemoMode) {
           set((state) => ({
@@ -228,11 +287,10 @@ export const useTaskStore = create<TaskState>()(
               t.id === id ? { ...t, ...data, updatedAt: new Date().toISOString() } : t
             ),
           }))
-          toast.success('✅ Tarea editada (temporal - se perderá al recargar)')
+          toast.success('✅ Tarea actualizada (modo demo)')
           return
         }
-        
-        // Modo normal: editar en API
+
         try {
           const response = await api.put(`/api/tasks/${id}`, data)
           set((state) => ({
@@ -244,15 +302,13 @@ export const useTaskStore = create<TaskState>()(
         }
       },
 
-      // Eliminar tarea SOLO en memoria (no llama a la API en modo demo)
       deleteTask: async (id) => {
         if (get().isDemoMode) {
           set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }))
-          toast.success('✅ Tarea eliminada (temporal - se perderá al recargar)')
+          toast.success('✅ Tarea eliminada (modo demo)')
           return
         }
-        
-        // Modo normal: eliminar en API
+
         try {
           await api.delete(`/api/tasks/${id}`)
           set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }))
@@ -262,7 +318,6 @@ export const useTaskStore = create<TaskState>()(
         }
       },
 
-      // Cambiar estado SOLO en memoria (no llama a la API en modo demo)
       updateStatus: async (id, status) => {
         if (get().isDemoMode) {
           set((state) => ({
@@ -272,10 +327,9 @@ export const useTaskStore = create<TaskState>()(
           }))
           return
         }
-        
-        // Modo normal: cambiar en API
+
         try {
-          const response = await api.patch(`/api/tasks/${id}/status`, { status })
+          const response = await api.put(`/api/tasks/${id}`, { status })
           set((state) => ({
             tasks: state.tasks.map((t) => (t.id === id ? response.data : t)),
           }))
@@ -285,63 +339,65 @@ export const useTaskStore = create<TaskState>()(
       },
 
       setFilters: (filters) => {
-        set({ filters })
+        set({ filters, pagination: { ...get().pagination, page: 1 } })
+        get().fetchTasks(1)
       },
 
       setSorting: (sortBy, order) => {
         set({ sortBy, order })
+        get().fetchTasks()
+      },
+
+      setSearchQuery: (query) => {
+        set({ searchQuery: query, pagination: { ...get().pagination, page: 1 } })
+        get().fetchTasks(1)
       },
 
       getFilteredTasks: () => {
         const { tasks, filters, sortBy, order } = get()
-        
+
         let filtered = [...tasks]
-        
-        // Aplicar filtros
+
         if (filters.status) {
           filtered = filtered.filter((t) => t.status === filters.status)
         }
-        
+
         if (filters.priority) {
           filtered = filtered.filter((t) => t.priority === filters.priority)
         }
-        
-        // Aplicar sorting
+
         filtered.sort((a, b) => {
           if (sortBy === 'priority') {
             const priorityOrder = { HIGH: 3, MEDIUM: 2, LOW: 1 }
-            const aValue = priorityOrder[a.priority as keyof typeof priorityOrder]
-            const bValue = priorityOrder[b.priority as keyof typeof priorityOrder]
+            const aValue = priorityOrder[a.priority]
+            const bValue = priorityOrder[b.priority]
             return order === 'asc' ? aValue - bValue : bValue - aValue
           } else if (sortBy === 'dueDate') {
             const aDate = a.dueDate ? new Date(a.dueDate).getTime() : 0
             const bDate = b.dueDate ? new Date(b.dueDate).getTime() : 0
             return order === 'asc' ? aDate - bDate : bDate - aDate
           } else {
-            // createdAt
             const aDate = new Date(a.createdAt).getTime()
             const bDate = new Date(b.createdAt).getTime()
             return order === 'asc' ? aDate - bDate : bDate - aDate
           }
         })
-        
+
         return filtered
       },
 
-      // Resetear a tareas demo originales (se llama al recargar)
       resetToDemo: () => {
-        set({ tasks: demoTasks })
+        set({ tasks: demoTasks, pagination: defaultPagination })
       },
     }),
     {
       name: 'task-storage',
-      partialize: (state) => ({ 
-        tasks: state.tasks,
+      partialize: (state) => ({
         filters: state.filters,
         sortBy: state.sortBy,
         order: state.order,
+        pagination: state.pagination,
       }),
-      // NO persistir isDemoMode para que siempre empiece en modo demo
       skipHydration: true,
     }
   )

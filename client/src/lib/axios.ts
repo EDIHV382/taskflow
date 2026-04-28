@@ -1,11 +1,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 
-// Detectar si estamos en production (Vercel) o development
-// En production, usar la misma URL del frontend (las API routes están en el mismo dominio)
-// En development, usar localhost:5000
-const API_URL = window.location.hostname === 'localhost'
-  ? 'http://localhost:5000'
-  : window.location.origin
+// API URL - always use relative path for Vercel serverless functions
+// Both in development (vercel dev) and production
+const API_URL = window.location.origin
 
 const api = axios.create({
   baseURL: API_URL,

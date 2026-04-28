@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { Login } from '../pages/Login'
 import { Dashboard } from '../pages/Dashboard'
 import { Kanban } from '../pages/Kanban'
+import { Stats } from '../pages/Stats'
 import { useAuthStore } from '../store/authStore'
 import { Toaster } from 'react-hot-toast'
 
@@ -29,15 +30,23 @@ export const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/kanban"
-          element={
-            <ProtectedRoute>
-              <Kanban />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="/kanban"
+        element={
+          <ProtectedRoute>
+            <Kanban />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/stats"
+        element={
+          <ProtectedRoute>
+            <Stats />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </>
   )

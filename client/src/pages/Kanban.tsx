@@ -4,7 +4,8 @@ import { useTaskStore, Task } from '../store/taskStore'
 import { TaskCard } from '../components/TaskCard'
 import { Modal } from '../components/Modal'
 import { TaskForm } from '../components/TaskForm'
-import { Plus, Moon, Sun, LogOut, LayoutList } from 'lucide-react'
+import { ConfirmModal } from '../components/ConfirmModal'
+import { Plus, Moon, Sun, LogOut, LayoutList, BarChart3 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { Status, CreateTaskDto } from '../store/taskStore'
@@ -19,10 +20,11 @@ const columns: { id: Status; title: string }[] = [
 export const Kanban = () => {
   const { tasks, isLoading, fetchTasks, createTask, updateTask, deleteTask, updateStatus } = useTaskStore()
   const { user, logout } = useAuthStore()
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [darkMode, setDarkMode] = useState(false)
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     fetchTasks()
@@ -46,9 +48,14 @@ export const Kanban = () => {
     setIsModalOpen(true)
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm('¿Estás seguro de eliminar esta tarea?')) {
-      deleteTask(id)
+  const handleDeleteClick = (id: string) => {
+    setTaskToDelete(id)
+  }
+
+  const handleConfirmDelete = () => {
+    if (taskToDelete) {
+      deleteTask(taskToDelete)
+      setTaskToDelete(null)
     }
   }
 
@@ -82,14 +89,21 @@ export const Kanban = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">TaskFlow</h1>
-              <Link
-                to="/dashboard"
-                className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
-              >
-                <LayoutList className="w-5 h-5" />
-                <span className="hidden sm:inline">Lista</span>
-              </Link>
-            </div>
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <LayoutList className="w-5 h-5" />
+              <span className="hidden sm:inline">Lista</span>
+            </Link>
+            <Link
+              to="/stats"
+              className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <BarChart3 className="w-5 h-5" />
+              <span className="hidden sm:inline">Estadísticas</span>
+            </Link>
+          </div>
             
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">
@@ -166,11 +180,11 @@ export const Kanban = () => {
                           id={task.id}
                           className="cursor-grab active:cursor-grabbing"
                         >
-                          <TaskCard
-                            task={task}
-                            onEdit={handleEdit}
-                            onDelete={handleDelete}
-                          />
+              <TaskCard
+                  task={task}
+                  onEdit={handleEdit}
+                  onDelete={handleDeleteClick}
+                />
                         </div>
                       ))
                     ) : (
@@ -204,6 +218,18 @@ export const Kanban = () => {
           }}
         />
       </Modal>
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={!!taskToDelete}
+        onClose={() => setTaskToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Eliminar tarea"
+        message="¿Estás seguro de que deseas eliminar esta tarea? Esta acción no se puede deshacer."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="danger"
+      />
     </div>
   )
 }

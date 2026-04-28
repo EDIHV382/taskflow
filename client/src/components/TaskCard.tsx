@@ -16,18 +16,20 @@ export const TaskCard = ({ task, onEdit, onDelete }: TaskCardProps) => {
           {task.title}
         </h3>
         <div className="flex items-center gap-1">
-          <button
-            onClick={() => onEdit(task)}
-            className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => onDelete(task.id)}
-            className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+      <button
+        onClick={() => onEdit(task)}
+        className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+        aria-label="Editar tarea"
+      >
+        <Pencil className="w-4 h-4" />
+      </button>
+      <button
+        onClick={() => onDelete(task.id)}
+        className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+        aria-label="Eliminar tarea"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
         </div>
       </div>
       
