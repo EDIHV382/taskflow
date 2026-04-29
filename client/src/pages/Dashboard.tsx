@@ -283,25 +283,25 @@ export const Dashboard = () => {
               transition={{ duration: 0.3, delay: index * 0.05 }}
             >
               <TaskCard
-                key={task.id}
                 task={task}
                 onEdit={handleEdit}
                 onDelete={handleDeleteClick}
               />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {getFilteredTasks().map((task: Task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onEdit={handleEdit}
-                onDelete={handleDeleteClick}
-              />
-            ))}
-          </div>
-        )}
+            </motion.div>
+          ))}
+        </motion.div>
+      ) : (
+        <div className="space-y-2">
+          {getFilteredTasks().map((task: Task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              onEdit={handleEdit}
+              onDelete={handleDeleteClick}
+            />
+          ))}
+        </div>
+      )}
 
         {/* Pagination */}
         {!isLoading && tasks.length > 0 && (
