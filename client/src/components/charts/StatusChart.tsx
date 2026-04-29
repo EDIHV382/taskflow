@@ -77,7 +77,7 @@ export const StatusChart = ({ data }: StatusChartProps) => {
           <Legend
             verticalAlign="bottom"
             height={36}
-            formatter={(value: string, entry: any) => (
+            formatter={(value: string, _entry: any) => (
               <span className="text-gray-700 dark:text-gray-300">
                 {value}: {chartData.find((d) => d.name === value)?.value}
               </span>

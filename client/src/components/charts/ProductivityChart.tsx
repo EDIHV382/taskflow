@@ -11,7 +11,7 @@ interface ProductivityChartProps {
 }
 
 export const ProductivityChart = ({ data }: ProductivityChartProps) => {
-  const maxValue = Math.max(...data.map((d) => d.completed), 1);
+  const _maxValue = Math.max(...data.map((d) => d.completed), 1); // Reference for future scaling
 
   return (
     <motion.div
