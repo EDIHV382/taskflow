@@ -30,7 +30,7 @@ export const PriorityChart = ({ data }: PriorityChartProps) => {
     key,
   }));
 
-  const maxValue = Math.max(...Object.values(data));
+  const _maxValue = Math.max(...Object.values(data)); // Used for scaling reference
 
   return (
     <motion.div

@@ -11,7 +11,7 @@ import { useDebounce } from '../hooks/useDebounce'
 import { Plus, List, LayoutGrid, Moon, Sun, LogOut, KanbanSquare, BarChart3, Search, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import { Status, Priority } from '../store/taskStore'
+// Status and Priority types are used implicitly via taskStore
 
 export const Dashboard = () => {
   const {
