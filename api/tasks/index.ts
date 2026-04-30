@@ -30,7 +30,7 @@ export default async function handler(
       if (!validatedQuery.success) {
         return response.status(400).json({
           error: 'Invalid query parameters',
-          details: validatedQuery.error.errors,
+          details: validatedQuery.error.issues,
         });
       }
 
@@ -106,7 +106,7 @@ export default async function handler(
       if (!validatedData.success) {
         return response.status(400).json({
           error: 'Invalid input',
-          details: validatedData.error.errors,
+          details: validatedData.error.issues,
         });
       }
 

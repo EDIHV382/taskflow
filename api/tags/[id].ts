@@ -63,7 +63,7 @@ export default async function handler(
       if (!validatedData.success) {
         return response.status(400).json({
           error: 'Invalid input',
-          details: validatedData.error.errors,
+          details: validatedData.error.issues,
         });
       }
 
