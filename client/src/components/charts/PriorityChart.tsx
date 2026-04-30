@@ -30,8 +30,6 @@ export const PriorityChart = ({ data }: PriorityChartProps) => {
     key,
   }));
 
-  const _maxValue = Math.max(...Object.values(data)); // Used for scaling reference
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
